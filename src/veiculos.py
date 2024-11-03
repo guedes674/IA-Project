@@ -39,6 +39,31 @@ class Veiculo:
     def descarregar(self):
         print(f"{self.tipo} descarregou {self.carga_atual}kg de mantimentos.")
         self.carga_atual = 0
+    
+    #getters da classe veiculo
+    def get_tipo(self):
+        return self.tipo
+    
+    def get_capacidade_max_carga(self):
+        return self.capacidade_max_carga
+    
+    def get_carga_atual(self):
+        return self.carga_atual
+    
+    def get_autonomia_max(self):
+        return self.autonomia_max
+    
+    def get_autonomia_atual(self):
+        return self.autonomia_atual
+    
+    def get_velocidade(self):
+        return self.velocidade
+    
+    def get_terrenos_possiveis(self):
+        return self.terrenos_possiveis
+    
+    def get_localizacao_atual(self):
+        return self.localizacao_atual
 
     def __str__(self):
         return (f"{self.tipo} - Capacidade de Carga: {self.capacidade_max_carga} kg, "

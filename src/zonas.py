@@ -19,6 +19,31 @@ class Zona:
         #pensar a lógica depois
         return 0
 
+    #getters da classe zona
+    def get_nome(self):
+        return self.nome
+    
+    def get_tipo_terreno(self):
+        return self.tipo_terreno
+    
+    def get_mant_necessarios(self):
+        return self.mant_necessarios
+    
+    def get_prioridade(self):
+        return self.prioridade
+    
+    def get_janela_tempo(self):
+        return self.janela_tempo
+    
+    def get_populacao(self):
+        return self.populacao
+
+    def get_dificuldade_acesso(self):
+        return self.dificuldade_acesso
+    
+    def is_atendida(self):
+        return self.atendida
+
     def __str__(self):
         return (f"Zona {self.nome} (Terreno: {self.tipo_terreno})"
                 f"Mantimentos necessários: {self.mant_necessarios}kg"
