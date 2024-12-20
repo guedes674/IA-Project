@@ -16,11 +16,10 @@ class Zone:
         self.prioridade = prioridade
         self.janela_tempo = janela_tempo
 
-
 class Node:
     def __init__(self, name, id=-1):
         self.m_id = id
-        self.m_name = str(name)
+        self.m_name = name
 
     def __str__(self):
         return "node " + self.m_name
@@ -35,7 +34,9 @@ class Node:
         return self.m_name
 
     def __eq__(self, other):
-        return self.m_name == other.m_name
+        if isinstance(other, self.__class__):
+            return self.m_name == other.m_name
+        return False
 
     def __hash__(self):
         return hash(self.m_name)
@@ -100,6 +101,23 @@ class Graph:
         self.m_graph[node1].append((node2, weight))
         if not self.m_directed:
             self.m_graph[node2].append((node1, weight))
+    
+    def simulate_distribution(self):
+        # Simulação da distribuição para uma rota com A*
+        g.desenha()
+        #start, goal = "Base", "ZonaE"
+        #came_from, cost_so_far = self.m_graph.a_star_search(start, goal, heuristic)
+
+        #path = []
+        #current = goal
+        #while current != start:
+        #    path.append(current)
+        #    current = came_from[current]
+        #path.append(start)
+        #path.reverse()
+
+        #print("Melhor path: ", path)
+        #print("Custo total: ", cost_so_far[goal])
 
     def getNodes(self):
         return self.m_nodes
@@ -247,7 +265,7 @@ class Graph:
         cost_so_far[start] = 0
 
         while not frontier.empty():
-            _, current = frontier.get()
+            current = frontier.get()
 
             if current == goal:
                 break
@@ -257,8 +275,8 @@ class Graph:
                 if next[0] not in cost_so_far or new_cost < cost_so_far[next[0]]:
                     cost_so_far[next[0]] = new_cost
                     # Prioridade integrada na função de avaliação
-                    priority = new_cost + heuristica[next[0]]
-                    frontier.put((priority, next[0]))
+                    priority = new_cost + heuristic(next[0], goal)
+                    frontier.put(priority, next[0])
                     came_from[next[0]] = current
 
         # Reconstruir o caminho
@@ -274,10 +292,12 @@ class Graph:
     def desenha(self):
         g = nx.Graph()
         for node in self.m_nodes:
-            g.add_node(node)
-            for (adjacente, peso) in self.m_graph[node]:
-                g.add_edge(node, adjacente, weight=peso)
+            # Adicionar o nó ao grafo, assumindo que node.m_name é o nome do nó
+            g.add_node(node.m_name)
+            for (adjacente, peso) in self.m_graph[node.m_name]:  # Acesse pelo nome
+                g.add_edge(node.m_name, adjacente, weight=peso)
 
+        # Configuração do layout e desenho do grafo
         pos = nx.spring_layout(g)
         nx.draw_networkx(g, pos, with_labels=True, font_weight='bold')
         labels = nx.get_edge_attributes(g, 'weight')
@@ -285,69 +305,17 @@ class Graph:
         plt.draw()
         plt.show()
 
-def heuristic(zone1, zone2):
-    # Função heurística simulada: pode ser substituída com base na distância geográfica
-    return abs(hash(zone1) - hash(zone2)) % 10
+    def heuristic(zone1, zone2):
+        # Função heurística simulada: pode ser substituída com base na distância geográfica
+        return abs(hash(zone1) - hash(zone2)) % 10
 
-# Configuração do g com zonas afetadas
-g = Graph(directed=True)
-# Adicionar arestas (baseado no exemplo fornecido)
-edges = {
-    'Health Planet': [('Celeirós', 4.9), ('Real', 4.5), ('Vimieiro', 2.7), ('São Vicente', 5)],
-    'Celeirós': [('Panoias', 2.5), ('Pedralva', 2.6), ('Arentim', 3.2), ('São Vitor', 3)],
-    # ... Adicione o restante das arestas aqui
-}
+g = Graph()
+g.add_edge('Porto', 'Braga', 4.9)
+g.add_edge('Braga', 'Viana do Castelo', 3.2)
+g.add_edge('Viana do Castelo', 'Vila Real', 4.0)
+g.add_edge('Vila Real', 'Bragança', 2.5)
+g.add_edge('Bragança', 'Viana do Castelo', 3.5)
+g.add_edge('Braga', 'Vila Real', 3.5)
 
-for node1, edges in edges.items():
-    for edge in edges:
-        node2, weight = edge
-        g.add_edge(node1, node2, weight)
-
-# Adicionar condições meteorológicas dinâmicas
-g.condicoes_meteorologicas[('Celeirós', 'Panoias')] = 1.5  # Aumentar o custo devido à tempestade
-
-# Definir veículos
-drones = Vehicle("Drone", capacidade=10, autonomia=50, restricoes=["Nenhuma"])
-caminhao = Vehicle("Caminhão", capacidade=200, autonomia=500, restricoes=["Terrenos Acidentados"])
-
-# Definir zonas de entrega com prioritys e janelas de tempo
-zonas = {
-    'Arentim': Zone('Arentim', prioridade=5, janela_tempo=120),
-    'Ferreiros': Zone('Ferreiros', prioridade=3, janela_tempo=90),
-    # ... Adicione outras zonas
-}
-
-# Heurística (estimativa para o objetivo)
-heuristica = {
-    'Health Planet': 0,
-    'Celeirós': 4.9,
-    'Panoias': 7.4,
-    # ... Complete com os outros nós
-}
-
-# Testar busca A*
-start = 'Health Planet'
-goal = 'Arentim'
-path, cost = g.a_star_search(start, goal, heuristica)
-print(f"Melhor caminho: {path} com custo: {cost}")
-
-# Desenhar o g
-g.desenha()
-
-def simulate_distribution():
-    # Simulação da distribuição para uma rota com A*
-    start, goal = "Base", "ZonaE"
-    came_from, cost_so_far = g.a_star_search(start, goal, heuristic)
-
-    path = []
-    current = goal
-    while current != start:
-        path.append(current)
-        current = came_from[current]
-    path.append(start)
-    path.reverse()
-
-    print("Melhor path: ", path)
-    print("Custo total: ", cost_so_far[goal])
-
-simulate_distribution()
+# Simular a distribuição
+g.simulate_distribution()
