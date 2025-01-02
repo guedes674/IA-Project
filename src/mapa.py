@@ -67,7 +67,8 @@ class Mapa:
         self.m_graph = {}
         self.zone_priorities = {}
         self.vehicle_limitations = {}
-        self.condicoes_meteorologicas = {}
+        self.metereologic_conditions = {}
+        self.disconnected_edges = []
 
     def __str__(self):
         out = ""
@@ -93,23 +94,36 @@ class Mapa:
         self.m_graph[node1].append((node2, weight))
         if not self.m_directed:
             self.m_graph[node2].append((node1, weight))
+        
+    def delete_edge(self, node1, node2):
+        if node1 in self.m_graph:
+            self.m_graph[node1] = [(adj, peso) for (adj, peso) in self.m_graph[node1] if adj != node2]
+        if node2 in self.m_graph:
+            self.m_graph[node2] = [(adj, peso) for (adj, peso) in self.m_graph[node2] if adj != node1]
+            
+    def add_priorities_to_queue(self, priorities):
+        """
+        Adiciona os nós à PriorityQueue com base nas suas prioridades.
+        """
+        priority_queue = PriorityQueue()
+        for node, priority in priorities.items():
+            priority_queue.put(node, priority)
+        return priority_queue
 
     def simulate_distribution(self):
         # Simulação da distribuição para uma rota com A*
         self.desenha()
-        #start, goal = "Base", "ZonaE"
-        #came_from, cost_so_far = self.m_graph.a_star_search(start, goal, heuristic)
-
-        #path = []
-        #current = goal
-        #while current != start:
-        #    path.append(current)
-        #    current = came_from[current]
-        #path.append(start)
-        #path.reverse()
-
-        #print("Melhor path: ", path)
-        #print("Custo total: ", cost_so_far[goal])
+        start, goal = "Viana do Castelo", "Faro"
+        came_from, cost_so_far = self.m_graph.a_star_search(start, goal)
+        path = []
+        current = goal
+        while current != start:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        path.reverse()
+        print("Melhor path: ", path)
+        print("Custo total: ", cost_so_far[goal])
 
     def getNodes(self):
         return self.m_nodes
@@ -126,8 +140,8 @@ class Mapa:
     def get_arc_cost(self, current, neighbor):
         base_cost = next((peso for (adjacente, peso) in self.m_graph[current] if adjacente == neighbor), float('inf'))
         # Ajustar o custo com base em condições meteorológicas
-        if (current, neighbor) in self.condicoes_meteorologicas:
-            return base_cost * self.condicoes_meteorologicas[(current, neighbor)]
+        if (current, neighbor) in self.metereologic_conditions:
+            return base_cost * self.metereologic_conditions[(current, neighbor)]
         return base_cost
 
     def calculate_cost(self, path):
@@ -136,7 +150,7 @@ class Mapa:
             custo += self.get_arc_cost(path[i], path[i + 1])
         return custo
 
-    def heuristic(self,zone1, zone2):
+    """ def heuristic(self,zone1, zone2):
         # Função heurística simulada: pode ser substituída com base na distância geográfica
         return abs(hash(zone1) - hash(zone2)) % 10
 
@@ -250,7 +264,7 @@ class Mapa:
 
         return None
 
-    def a_star_search(self, start, goal):
+    def a_star_search(self, start):
         if start not in self.m_graph:
             raise KeyError(f"O nó inicial '{start}' não está no grafo.")
         if goal not in self.m_graph:
@@ -265,9 +279,6 @@ class Mapa:
 
         while not frontier.empty():
             current = frontier.get()
-
-            if current == goal:
-                break
 
             if current not in self.m_graph:
                 raise KeyError(f"O nó '{current}' não está no grafo.")
@@ -293,7 +304,199 @@ class Mapa:
             current = came_from[current]
         path.reverse()
 
-        return path, cost_so_far[goal]
+        return path, cost_so_far[goal] 
+        
+            def a_star(self, start, priorities):
+      
+
+        open_list = self.add_priorities_to_queue(priorities)
+        for elem in open_list.elements:
+            print(f"Prioridades: {elem}")
+        came_from = {}
+        g_score = {start: 0}
+        visited = set()
+        current = None
+        while not open_list.empty():
+            current_node = open_list.get()
+            
+            if current_node in visited:
+                continue
+            visited.add(current_node)
+
+            # Expande os vizinhos
+            for neighbor, cost in self.m_graph[current_node]:
+                tentative_g_score = g_score[current_node] + cost
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current_node
+                    g_score[neighbor] = tentative_g_score
+                    current = neighbor
+        
+        # Reconstruir o caminho
+        path = []
+        while current in came_from:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        path.reverse()
+        
+        return path
+        """
+
+    def a_star(self, start, priorities):
+        open_set = self.add_priorities_to_queue(priorities)
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self.heuristic_with_priority(start, priorities)}
+
+        while not open_set.empty():
+            current_node = open_set.get()  # Get the node with the highest priority
+
+            for neighbor in self.m_graph[current_node]:
+                if neighbor not in g_score:
+                    g_score[neighbor] = float('inf')  # Initialize g_score for the neighbor
+
+                tentative_g_score = g_score[current_node] + self.get_arc_cost(current_node, neighbor)
+
+                if tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current_node
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = tentative_g_score + self.heuristic_with_priority(neighbor, priorities)
+                    open_set.put((f_score[neighbor], neighbor))
+
+        return self.reconstruct_path(came_from, start)
+
+    def reconstruct_path(self, came_from, start):
+        total_path = []
+        current_node = start
+        while current_node in came_from:
+            total_path.append(current_node)
+            current_node = came_from[current_node]
+        total_path.append(current_node)
+        return total_path[::-1]
+
+    def heuristic_with_priority(self, node, priorities):
+        """
+        Heurística que leva em consideração as prioridades dos vizinhos.
+        """
+        adj_priority_cost = 0
+        for neighbor in self.m_graph[node]:
+            adj_priority_cost += priorities.get(neighbor, 0)  # Prioridade maior a
+        return adj_priority_cost
+
+    def greedy(self, start, priorities):
+        """
+        Implementação da busca Greedy (prioriza apenas a heurística, não o custo real).
+        """
+        open_list = PriorityQueue()
+        open_list.put(start, self.heuristic_with_priority(start, priorities))
+
+        came_from = {}
+        visited = set()
+        
+        while not open_list.empty():
+            current_node = open_list.get()
+            
+            if current_node in visited:
+                continue
+            visited.add(current_node)
+
+            # Expande os vizinhos, priorizando os de maior heurística
+            for neighbor, cost in self.m_graph[current_node]:
+                if neighbor not in came_from:
+                    came_from[neighbor] = current_node
+                    open_list.put(neighbor, self.heuristic_with_priority(neighbor, priorities))
+
+        # Reconstruir o caminho
+        path = []
+        current = start
+        while current in came_from:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        return path[::-1]
+
+    def dfs(self, start):
+        """
+        Implementação da busca em profundidade (DFS).
+        """
+        stack = [start]
+        came_from = {start: None}
+        visited = set()
+
+        while stack:
+            current_node = stack.pop()
+            
+            if current_node in visited:
+                continue
+            visited.add(current_node)
+
+            # Expande os vizinhos, adicionando-os ao topo da pilha
+            for neighbor, cost in self.m_graph[current_node]:
+                if neighbor not in came_from:
+                    came_from[neighbor] = current_node
+                    stack.append(neighbor)
+                    
+        # Reconstruir o caminho
+        path = []
+        current = start
+        while current in came_from:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        return path[::-1]
+
+    def bfs(self, start):
+        """
+        Implementação da busca em largura (BFS).
+        """
+        queue = [start]
+        came_from = {start: None}
+        visited = set()
+
+        while queue:
+            current_node = queue.pop(0)
+            
+            if current_node in visited:
+                continue
+            visited.add(current_node)
+
+            # Expande os vizinhos, adicionando-os à fila
+            for neighbor, cost in self.m_graph[current_node]:
+                if neighbor not in came_from:
+                    came_from[neighbor] = current_node
+                    queue.append(neighbor)
+
+        # Reconstruir o caminho
+        path = []
+        current = start
+        while current in came_from:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        return path[::-1]
+
+    def explore_zones(self, start, priorities, algorithm=''):
+        """
+        Função para explorar as zonas com base no algoritmo escolhido pelo usuário.
+        """
+        if algorithm == 'a_star':
+            print("Usando A*...")
+            path = self.a_star(start, priorities)
+            print(f"Caminho percorrido (A*): {path}")
+        elif algorithm == 'greedy':
+            print("Usando Greedy...")
+            path = self.greedy(start, priorities)
+            print(f"Nós visitados (Greedy): {path}")
+        elif algorithm == 'dfs':
+            print("Usando DFS...")
+            path = self.dfs(start)
+            print(f"Nós visitados (DFS): {path}")
+        elif algorithm == 'bfs':
+            print("Usando BFS...")
+            path = self.bfs(start)
+            print(f"Nós visitados (BFS): {path}")
+        else:
+            print("Algoritmo inválido.")
     
     def compare_search_strategies(self, start, goal, vehicle):
         results = {}

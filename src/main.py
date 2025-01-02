@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 def main():
     mapa = Mapa()  # Instância do mapa
+    
+    mapa.zone_priorities = {'Porto': 5, 'Braga': 2, 'Lisboa': 8, 'Faro': 1}
 
     # Adicionar nós e arestas representando cidades e distâncias aproximadas
     # Norte
@@ -78,55 +80,18 @@ def funcionalidades(mapa):
         if opcao == 1:
             exibir_mapa(mapa)
         elif opcao == 2:
-            testar_algoritmos(mapa)
+            explorar_zonas(mapa)
         elif opcao == 3:
             break
 
 def exibir_mapa(mapa):
     mapa.desenha()  # Usa a função desenha() definida anteriormente para mostrar o grafo
 
-def testar_algoritmos(mapa):
-    print("--------------------Algoritmos---------------------")
-    print("1 - Busca em Profundidade (DFS)")
-    print("2 - Busca em Largura (BFS)")
-    print("3 - Busca Limitada em Profundidade (DLS)")
-    print("4 - Busca Gulosa (Greedy)")
-    print("5 - A* (A-star)")
-    print("--------------------------------------------------")
-    
-    opcao = int(input("Escolha o algoritmo desejado: "))
+def explorar_zonas(mapa):
     start = input("Digite o nó inicial: ")
-    end = input("Digite o nó final: ")
-    
-    if opcao == 1:
-        print("Executando Busca em Profundidade (DFS)...")
-        path, custo = mapa.search_DFS(start, end)
-        print(f"Caminho: {path}, Custo: {custo}")
-    elif opcao == 2:
-        print("Executando Busca em Largura (BFS)...")
-        prioritys = {'Arentim': 2, 'Celeirós': 1}  # Exemplo de prioridades
-        path, custo = mapa.search_BFS(start, end, prioritys)
-        print(f"Caminho: {path}, Custo: {custo}")
-    elif opcao == 3:
-        print("Executando Busca Limitada em Profundidade (DLS)...")
-        limit = int(input("Digite o limite de profundidade: "))
-        prioritys = {'Arentim': 2, 'Celeirós': 1}  # Exemplo de prioridades
-        resultado = mapa.procura_DLS(start, end, limit, prioritys)
-        if resultado:
-            path, custo = resultado
-            print(f"Caminho: {path}, Custo: {custo}")
-        else:
-            print("Nenhum caminho encontrado dentro do limite.")
-    elif opcao == 4:
-        print("Executando Busca Gulosa (Greedy)...")
-        path, custo = mapa.search_greedy(start, end)
-        print(f"Caminho: {path}, Custo: {custo}")
-    elif opcao == 5:
-        print("Executando A* (A-star)...")
-        path, custo = mapa.a_star_search(start, end)
-        print(f"Caminho: {path}, Custo: {custo}")
-    else:
-        print("Opção inválida.")
+    priorities = {'Porto': 5, 'Braga': 2, 'Lisboa': 8, 'Faro': 1}
+    algorithm = input("Digite o algoritmo a ser utilizado (a_star, greedy, dfs, bfs): ")
+    mapa.explore_zones(start, priorities, algorithm)
 
 def configurar_prioridades_restricoes(mapa):
     while True:
