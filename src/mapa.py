@@ -1,7 +1,29 @@
 import heapq
-import networkx as nx
-import matplotlib.pyplot as plt
+#import networkx as nx
+#import matplotlib.pyplot as plt
 from queue import PriorityQueue, Queue
+
+node_info = {
+    'Porto': {'population': 1500, 'catastrophe_level': 2},
+    'Lisboa': {'population': 1500, 'catastrophe_level': 6},
+    'Coimbra': {'population': 1000, 'catastrophe_level': 1},
+    'Aveiro': {'population': 800, 'catastrophe_level': 2},
+    'Viana do Castelo': {'population': 200, 'catastrophe_level': 4},
+    'Braga': {'population': 500, 'catastrophe_level': 0},
+    'Faro': {'population': 400, 'catastrophe_level': 3},
+    'Vila Real': {'population': 100, 'catastrophe_level': 2},
+    'Guarda': {'population': 50, 'catastrophe_level': 3},
+    'Castelo Branco': {'population': 150, 'catastrophe_level': 1},
+    'Leiria': {'population': 250, 'catastrophe_level': 1},
+    'Évora': {'population': 100, 'catastrophe_level': 3},
+    'Santarém': {'population': 150, 'catastrophe_level': 2},
+    'Setúbal': {'population': 250, 'catastrophe_level': 0},
+    'Bragança': {'population': 50, 'catastrophe_level': 4},
+    'Portalegre': {'population': 100, 'catastrophe_level': 0},
+    'Beja': {'population': 30, 'catastrophe_level': 2},
+    'Viseu': {'population': 200, 'catastrophe_level': 1},
+    'Guimarães': {'population': 200, 'catastrophe_level': 1}
+}
 
 class Vehicle:
     def __init__(self, tipo, capacidade, autonomia, restricoes):
@@ -23,21 +45,28 @@ class Zone:
         self.janela_tempo = janela_tempo
 
 class Node:
-    def __init__(self, name, id=-1):
-        self.m_id = id
+    def __init__(self, name, population=0, catastrophe_level=0):
         self.m_name = name
+        self.population = population
+        self.catastrophe_level = catastrophe_level
 
     def __str__(self):
         return "node " + self.m_name
 
-    def setId(self, id):
-        self.m_id = id
-
-    def getId(self):
-        return self.m_id
-
     def getName(self):
         return self.m_name
+    
+    def getPopulation(self):
+        return self.population
+    
+    def getCatastropheLevel(self):
+        return self.catastrophe_level
+    
+    def setPopulation(self, population):
+        self.population = population
+        
+    def setCatastropheLevel(self, catastrophe_level):
+        self.catastrophe_level = catastrophe_level
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -62,13 +91,14 @@ class PriorityQueue:
 
 class Mapa:
     def __init__(self, directed=False):
-        self.m_nodes = []
         self.m_directed = directed
+        self.m_nodes = []
         self.m_graph = {}
         self.zone_priorities = {}
         self.vehicle_limitations = {}
         self.metereologic_conditions = {}
         self.disconnected_edges = []
+        self.heuristics = {}
 
     def __str__(self):
         out = ""
@@ -76,25 +106,25 @@ class Mapa:
             out += "node " + str(key) + ": " + str(self.m_graph[key]) + "\n"
         return out
 
-    def add_edge(self, node1, node2, weight):
-        n1 = Node(node1)
-        n2 = Node(node2)
+    def add_edge(self, name1, name2, weight):
+        n1 = Node(name1)
+        n2 = Node(name2)
         if n1 not in self.m_nodes:
-            n1_id = len(self.m_nodes)
-            n1.setId(n1_id)
+            n1.setPopulation(node_info[name1]['population'])
+            n1.setCatastropheLevel(node_info[name1]['catastrophe_level'])
+            self.m_graph[name1] = []
             self.m_nodes.append(n1)
-            self.m_graph[node1] = []
 
         if n2 not in self.m_nodes:
-            n2_id = len(self.m_nodes)
-            n2.setId(n2_id)
+            n2.setPopulation(node_info[name2]['population'])
+            n2.setCatastropheLevel(node_info[name2]['catastrophe_level'])
+            self.m_graph[name2] = []
             self.m_nodes.append(n2)
-            self.m_graph[node2] = []
 
-        self.m_graph[node1].append((node2, weight))
+        self.m_graph[name1].append((name2, weight))
         if not self.m_directed:
-            self.m_graph[node2].append((node1, weight))
-        
+            self.m_graph[name2].append((name1, weight))
+
     def delete_edge(self, node1, node2):
         if node1 in self.m_graph:
             self.m_graph[node1] = [(adj, peso) for (adj, peso) in self.m_graph[node1] if adj != node2]
@@ -140,8 +170,6 @@ class Mapa:
     def get_arc_cost(self, current, neighbor):
         base_cost = next((peso for (adjacente, peso) in self.m_graph[current] if adjacente == neighbor), float('inf'))
         # Ajustar o custo com base em condições meteorológicas
-        if (current, neighbor) in self.metereologic_conditions:
-            return base_cost * self.metereologic_conditions[(current, neighbor)]
         return base_cost
 
     def calculate_cost(self, path):
@@ -150,220 +178,64 @@ class Mapa:
             custo += self.get_arc_cost(path[i], path[i + 1])
         return custo
 
-    """ def heuristic(self,zone1, zone2):
-        # Função heurística simulada: pode ser substituída com base na distância geográfica
-        return abs(hash(zone1) - hash(zone2)) % 10
-
-    def search_DFS(self, start, end, path=None, visited=None):
-        if path is None:
-            path = []
-        if visited is None:
-            visited = set()
-
-        path = path + [start]
-        visited.add(start)
-
-        if start == end:
-            custoT = self.calculate_cost(path)
-            return path, custoT
-
-        for (adjacente, _) in self.m_graph[start]:
-            if adjacente not in visited:
-                resultado = self.search_DFS(adjacente, end, path, visited)
-                if resultado is not None:
-                    return resultado
-        return None
-
-    def search_BFS(self, start, end, priorities):
+    def a_star(self, start, node_list):
         visited = set()
-        fila = Queue()
-        custo = 0
+        came_from = {}
+        g_score = {node: float('inf') for node in self.m_graph}
+        g_score[start] = 0
+        f_score = {node: float('inf') for node in self.m_graph}
+        f_score[start] = self.heuristics[start]
 
-        fila.put(start)  # (prioridade, nó)
-        visited.add(start)
+        current_node = start
+        while len(node_list)!=0:
+            if current_node in node_list:
+                node_list.remove(current_node)
+                visited.add(current_node)
+            for neighbor in self.m_graph[current_node]:
+                if neighbor in visited:
+                    continue
+                tentative_g_score = g_score[current_node] + self.get_arc_cost(current_node, neighbor)
+                if tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current_node
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = g_score[neighbor] + self.heuristics[neighbor]
 
-        parent = dict()
-        parent[start] = None
-
-        path_found = False
-        while not fila.empty() and not path_found:
-            nodo_atual = fila.get()
-            if nodo_atual == end:
-                path_found = True
-            else:
-                for (adjacente, peso) in self.m_graph[nodo_atual]:
-                    if adjacente not in visited:
-                        visited.add(adjacente)
-                        parent[adjacente] = nodo_atual
-                        fila.put(adjacente)
-
-        path = []
-        if path_found:
-            path.append(end)
-            while parent[end] is not None:
-                path.append(parent[end])
-                end = parent[end]
-            path.reverse()
-            custo = self.calculate_cost(path)
-
-        return path, custo
-
-    def procura_DLS(self, start, end, limit, prioritys, path=None, visited=None):
-        if path is None:
-            path = []
-        if visited is None:
-            visited = set()
-
-        path = path + [start]
-        visited.add(start)
-
-        if len(path) > limit:
-            return None
-
-        if start == end:
-            custoT = self.calculate_cost(path)
-            custoT -= prioritys.get(end, 0)
-            return (path, custoT)
-
-        for (adjacente, peso) in self.m_graph[start]:
-            if adjacente not in visited:
-                resultado = self.procura_DLS(adjacente, end, limit, prioritys, path, visited)
-                if resultado is not None:
-                    return resultado
-        return None
-
-    def search_greedy(self, start, end, path=None, visited=None):
-        if path is None:
-            path = []
-        if visited is None:
-            visited = set()
-
-        path = path + [start]
-        visited.add(start)
-
-        if start == end:
-            custoT = self.calculate_cost(path)  # Calcula o custo total com base no caminho encontrado
-            return (path, custoT)
-
-        # Criar uma lista prioritária com base na heurística
-        adjacentes = []
-
-        for (adjacente, peso) in self.m_graph[start]:
-            if adjacente not in visited:
-                # Usar a função heurística para calcular a prioridade
-                heuristica = self.heuristic(adjacente, end)
-                heapq.heappush(adjacentes, (heuristica, adjacente))
-
-        # Escolher o nó com a menor estimativa heurística
-        while adjacentes:
-            _, proximo_nodo = heapq.heappop(adjacentes)
-
-            resultado = self.search_greedy(proximo_nodo, end, path, visited)
-            if resultado is not None:
-                return resultado
-
-        return None
-
-    def a_star_search(self, start):
-        if start not in self.m_graph:
-            raise KeyError(f"O nó inicial '{start}' não está no grafo.")
-        if goal not in self.m_graph:
-            raise KeyError(f"O nó final '{goal}' não está no grafo.")
-
+        return self.reconstruct_path(came_from, start)
+    
+    def procura_aStar(self, start, list):
         frontier = PriorityQueue()
         frontier.put(start, 0)
         came_from = {}
         cost_so_far = {}
         came_from[start] = None
         cost_so_far[start] = 0
-
+        
         while not frontier.empty():
             current = frontier.get()
-
-            if current not in self.m_graph:
-                raise KeyError(f"O nó '{current}' não está no grafo.")
-
+            if current in list:
+                list.remove(current)
+            
+            if len(list)==0:
+                break
+            
             for next in self.m_graph[current]:
-                if not isinstance(next, tuple) or len(next) != 2:
-                    raise ValueError(f"O formato das arestas está incorreto: {next}")
-
-                print(f"Processando nó atual: {current}, Próximo: {next}")
-
                 new_cost = cost_so_far[current] + self.get_arc_cost(current, next[0])
                 if next[0] not in cost_so_far or new_cost < cost_so_far[next[0]]:
                     cost_so_far[next[0]] = new_cost
-                    priority = new_cost + self.heuristic(next[0], goal)
+                    priority = new_cost + self.heuristics[next[0]]
                     frontier.put(next[0], priority)
                     came_from[next[0]] = current
+                last = current
 
-        # Reconstruir o caminho
+        # Reconstruct the path
         path = []
-        current = goal
+        current = last
         while current is not None:
             path.append(current)
             current = came_from[current]
         path.reverse()
 
-        return path, cost_so_far[goal] 
-        
-            def a_star(self, start, priorities):
-      
-
-        open_list = self.add_priorities_to_queue(priorities)
-        for elem in open_list.elements:
-            print(f"Prioridades: {elem}")
-        came_from = {}
-        g_score = {start: 0}
-        visited = set()
-        current = None
-        while not open_list.empty():
-            current_node = open_list.get()
-            
-            if current_node in visited:
-                continue
-            visited.add(current_node)
-
-            # Expande os vizinhos
-            for neighbor, cost in self.m_graph[current_node]:
-                tentative_g_score = g_score[current_node] + cost
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current_node
-                    g_score[neighbor] = tentative_g_score
-                    current = neighbor
-        
-        # Reconstruir o caminho
-        path = []
-        while current in came_from:
-            path.append(current)
-            current = came_from[current]
-        path.append(start)
-        path.reverse()
-        
         return path
-        """
-
-    def a_star(self, start, priorities):
-        open_set = self.add_priorities_to_queue(priorities)
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self.heuristic_with_priority(start, priorities)}
-
-        while not open_set.empty():
-            current_node = open_set.get()  # Get the node with the highest priority
-
-            for neighbor in self.m_graph[current_node]:
-                if neighbor not in g_score:
-                    g_score[neighbor] = float('inf')  # Initialize g_score for the neighbor
-
-                tentative_g_score = g_score[current_node] + self.get_arc_cost(current_node, neighbor)
-
-                if tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current_node
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + self.heuristic_with_priority(neighbor, priorities)
-                    open_set.put((f_score[neighbor], neighbor))
-
-        return self.reconstruct_path(came_from, start)
 
     def reconstruct_path(self, came_from, start):
         total_path = []
@@ -383,12 +255,12 @@ class Mapa:
             adj_priority_cost += priorities.get(neighbor, 0)  # Prioridade maior a
         return adj_priority_cost
 
-    def greedy(self, start, priorities):
+    def greedy(self, start):
         """
         Implementação da busca Greedy (prioriza apenas a heurística, não o custo real).
         """
         open_list = PriorityQueue()
-        open_list.put(start, self.heuristic_with_priority(start, priorities))
+        open_list.put(start, self.heuristic_with_priority(start))
 
         came_from = {}
         visited = set()
@@ -475,17 +347,21 @@ class Mapa:
         path.append(start)
         return path[::-1]
 
-    def explore_zones(self, start, priorities, algorithm=''):
+    def explore_zones(self, start, algorithm=''):
         """
         Função para explorar as zonas com base no algoritmo escolhido pelo usuário.
         """
+        list = []
+        for node in self.zone_priorities:
+            if self.zone_priorities[node] != 0:
+                list.append(node)
         if algorithm == 'a_star':
             print("Usando A*...")
-            path = self.a_star(start, priorities)
+            path = self.procura_aStar(start,list)
             print(f"Caminho percorrido (A*): {path}")
         elif algorithm == 'greedy':
             print("Usando Greedy...")
-            path = self.greedy(start, priorities)
+            #path = self.greedy(start)
             print(f"Nós visitados (Greedy): {path}")
         elif algorithm == 'dfs':
             print("Usando DFS...")
@@ -652,3 +528,24 @@ class Mapa:
         nx.draw_networkx_edge_labels(g, pos, edge_labels=labels)
         plt.draw()
         plt.show()
+
+    def initialize_heuristics(self):
+        for node in self.m_graph.keys():
+            self.heuristics[node] = self.calculate_heuristic(node)
+
+    def calculate_heuristic(self, node):
+        # Replace this with the actual heuristic calculation logic
+        total_adj_priority = 0
+        for node2 in self.m_graph[node]:
+            total_adj_priority += self.zone_priorities[node2[0]] * 0.1
+        return self.zone_priorities[node]*0.5 + total_adj_priority
+
+    def initialize_priority(self):
+        for node in self.m_nodes:
+            self.zone_priorities[node.getName()] = self.calculate_priority(node)
+
+    def calculate_priority(self,node):
+        population = node.getPopulation()
+        catastrophes_level = node.getCatastropheLevel()
+        number_paths = len(self.m_graph[node.getName()])
+        return population/(number_paths*10)*catastrophes_level

@@ -1,11 +1,9 @@
 from mapa import Mapa, Vehicle
-import networkx as nx
-import matplotlib.pyplot as plt
+#import networkx as nx
+#import matplotlib.pyplot as plt
 
 def main():
     mapa = Mapa()  # Instância do mapa
-    
-    mapa.zone_priorities = {'Porto': 5, 'Braga': 2, 'Lisboa': 8, 'Faro': 1}
 
     # Adicionar nós e arestas representando cidades e distâncias aproximadas
     # Norte
@@ -48,6 +46,12 @@ def main():
     # Algumas rotas diretas mais rápidas
     mapa.add_edge('Braga', 'Lisboa', 18.0)
     mapa.add_edge('Viana do Castelo', 'Lisboa', 19.0)
+    
+    mapa.initialize_priority()
+    mapa.initialize_heuristics()
+    
+    print(mapa.heuristics)
+    print(mapa.zone_priorities)
 
     while True:
         print("\n--------------------Menu---------------------")
@@ -89,9 +93,8 @@ def exibir_mapa(mapa):
 
 def explorar_zonas(mapa):
     start = input("Digite o nó inicial: ")
-    priorities = {'Porto': 5, 'Braga': 2, 'Lisboa': 8, 'Faro': 1}
     algorithm = input("Digite o algoritmo a ser utilizado (a_star, greedy, dfs, bfs): ")
-    mapa.explore_zones(start, priorities, algorithm)
+    mapa.explore_zones(start, algorithm)
 
 def configurar_prioridades_restricoes(mapa):
     while True:
