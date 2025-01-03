@@ -1,6 +1,6 @@
 from mapa import Mapa, Vehicle
-#import networkx as nx
-#import matplotlib.pyplot as plt
+import networkx as nx
+import matplotlib.pyplot as plt
 
 def main():
     mapa = Mapa()  # Instância do mapa
@@ -25,6 +25,7 @@ def main():
     mapa.add_edge('Castelo Branco', 'Guarda', 3.7)
     mapa.add_edge('Guarda', 'Vila Real', 5.0)
     mapa.add_edge('Castelo Branco', 'Leiria', 5.2)
+    mapa.add_edge('Guimarães', 'Aveiro', 6.0)
 
     # Sul
     mapa.add_edge('Lisboa', 'Setúbal', 3.0)
@@ -32,6 +33,8 @@ def main():
     mapa.add_edge('Évora', 'Beja', 3.5)
     mapa.add_edge('Beja', 'Faro', 5.0)
     mapa.add_edge('Lisboa', 'Évora', 5.8)
+    mapa.add_edge('Évora', 'Faro', 6.0)
+    mapa.add_edge('Faro', 'Castelo Branco', 7.0)
 
     # Ligações adicionais para tornar o grafo mais interconectado
     mapa.add_edge('Aveiro', 'Viseu', 4.0)
@@ -99,7 +102,7 @@ def explorar_zonas(mapa):
 def configurar_prioridades_restricoes(mapa):
     while True:
         print("\n--------------------Configurações---------------------")
-        print("1 - Definir prioridade de zona")
+        print("1 - Alterar nível de catástrofe em uma zona")
         print("2 - Configurar restrições de veículo")
         print("3 - Visualizar configurações atuais")
         print("4 - Voltar")
@@ -109,24 +112,34 @@ def configurar_prioridades_restricoes(mapa):
         
         if opcao == 1:
             zona = input("Digite o nome da zona: ")
-            prioridade = int(input("Digite a prioridade (1-10): "))
-            mapa.set_zone_priority(zona, prioridade)
+            prioridade = int(input("Digite o nivel de catástrof(1-10): "))
+            for node in mapa.m_nodes:
+                if node.getName() == zona:
+                    mapa.initialize_priority()
+                    mapa.initialize_heuristics()
+                    mapa.m_nodes[zona].setCatastrophyLevel(prioridade)
+                    
             print(f"Prioridade definida: {zona} -> {prioridade}")
             
         elif opcao == 2:
             zona = input("Digite o nome da zona: ")
             print("\nTipos de veículos disponíveis:")
-            print("1 - Caminhão Grande")
-            print("2 - Van")
-            print("3 - Carro")
+            print("1 - Carro de Bombeiros")
+            print("2 - Ambulancia")
+            print("3 - Helicoptero")
             tipo = int(input("Escolha o tipo de veículo restrito: "))
             
-            tipos = {1: "caminhao_grande", 2: "van", 3: "carro"}
+            tipos = {1: "carro de bombeiros", 2: "ambulancia", 3: "helicoptero"}
             if tipo in tipos:
                 mapa.set_vehicle_limitation(zona, [tipos[tipo]])
                 print(f"Restrição definida: {zona} não permite {tipos[tipo]}")
                 
         elif opcao == 3:
+                
+            print("\nNível de Catástrofe:")
+            for node in mapa.m_nodes:
+                print(f"{node.getName()}: {node.getCatastropheLevel()}")
+            
             print("\nPrioridades das Zonas:")
             for zona, prioridade in mapa.zone_priorities.items():
                 print(f"{zona}: {prioridade}")
@@ -143,17 +156,19 @@ def comparar_estrategias(mapa):
     
     # Criar veículo
     print("\nConfigurações do Veículo:")
-    print("1 - Caminhão Grande (alta capacidade, baixa mobilidade)")
-    print("2 - Van (média capacidade, média mobilidade)")
-    print("3 - Carro (baixa capacidade, alta mobilidade)")
+    print("1 - Carro de Bombeiros (alta capacidade, baixa mobilidade)")
+    print("2 - Ambulancia (média capacidade, média mobilidade)")
+    print("3 - Helicoptero (baixa capacidade, alta mobilidade)")
     
     tipo_veiculo = int(input("Escolha o tipo de veículo: "))
     
     veiculos = {
-        1: Vehicle("caminhao_grande", 2000, 80, []),
-        2: Vehicle("van", 1000, 100, []),
-        3: Vehicle("carro", 500, 120, [])
+        1: Vehicle("carro de bombeiros", 2000, 80, []),
+        2: Vehicle("ambulancia", 1000, 100, []),
+        3: Vehicle("helicoptero", 500, 120, [])
     }
+    
+    mapa.vehicle_limitations['helicoptero'] = ['Porto']
     
     if tipo_veiculo not in veiculos:
         print("Tipo de veículo inválido")
@@ -163,14 +178,12 @@ def comparar_estrategias(mapa):
     
     # Definir pontos
     start = input("Digite o ponto de partida: ")
-    end = input("Digite o ponto de destino: ")
-    
+    print(type(veiculo))
     # Executar comparação
-    try:
-        resultados = mapa.compare_search_strategies(start, end, veiculo)
-        mapa.analyze_results(resultados)
-    except Exception as e:
-        print(f"Erro ao comparar estratégias: {e}")
+    #try:
+    print(mapa.modified_a_star(start, veiculo))
+    #except Exception as e:
+        #print(f"Erro ao comparar estratégias: {e}")
 
 if __name__ == "__main__":
     main()
