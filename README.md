@@ -11,7 +11,7 @@
 | Nome           | Número  |
 | -------------- | ------- |
 | Tiago Carneiro | A93207  |
-| Rodrigo Lopes  | A101919 |
+| Rodrigo Lopes  | A104440 |
 | Tiago Guedes   | A97369  |
 | Filipe Santos  | A100607 |
 
